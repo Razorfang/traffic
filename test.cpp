@@ -1,28 +1,82 @@
 #include <iostream>
+#include <vector>
 
-class Intersection
+/* Generic control method. */
+class ControlMethod
 {
     public:
-        Intersection(float cpmNorth, float cpmEast, float cmpSouth, float cpmWest);
-        void print(void);
-    
+        ControlMethod(float cpmLimitLower, float cpmLimitUpper, std::vector<float> &efficiencies);
+        float get_cpm_lower_limit(void);
+        float get_cpm_upper_limit(void);
+        float get_eff(float cpmTotal);
     private:
-        float cpmN, cpmE,cpmS, cpmW;
+        float cpmL, cpmU;
+        std::vector<float> eff;
 };
 
-Intersection::Intersection(float cpmNorth, float cpmEast, float cmpSouth, float cpmWest)
+ControlMethod::ControlMethod(float cpmLimitLower, float cpmLimitUpper, std::vector<float> &efficiencies)
 {
-    cpmN = cpmNorth;
-    cpmE = cpmEast;
-    cpmS = cmpSouth;
-    cpmW = cpmWest;
+    cpmL = cpmLimitLower;
+    cpmU = cpmLimitUpper;
+    std::copy(efficiencies.begin(), efficiencies.end(), std::back_inserter(eff));
 }
 
-void Intersection::print(void)
+float ControlMethod::get_cpm_lower_limit(void)
 {
-    std::cout << "North: " << cpmN << ", East: " << cpmE << ", South: " << cpmS << ", West: " << cpmW << std::endl;
+    return cpmL;
 }
 
+float ControlMethod::get_cpm_upper_limit(void)
+{
+    return cpmU;
+}
+
+float ControlMethod::get_eff(float cpmTotal)
+{
+    if (cpmTotal < cpmL)
+    {
+        return eff[0];
+    }
+    else if (cpmTotal >= cpmU)
+    {
+        return eff[2];
+    }
+    else
+    {
+        return eff[1];
+    }
+}
+
+/* Chooses a control method from an internally-kept list of options. */
+class ControlPicker
+{
+    public:
+        void add_method(ControlMethod &method);
+        ControlMethod *get_best_ctrl_method(float cpmTotal);
+    private:
+        std::vector<ControlMethod> methods;
+};
+
+void ControlPicker::add_method(ControlMethod &method)
+{
+    methods.push_back(method);
+}
+
+ControlMethod *ControlPicker::get_best_ctrl_method(float cpmTotal)
+{
+    ControlMethod *bestMethod = &(methods[0]);
+
+    for (ControlMethod &m : methods)
+    {
+        if (m.get_eff(cpmTotal) > bestMethod->get_eff(cpmTotal))
+        {
+               bestMethod = &m; 
+        }
+    }
+
+    /* Return the method with the highest efficiency */
+    return bestMethod;
+}
 
 int main(int argc, char *argv[])
 {
@@ -32,9 +86,31 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    Intersection intersection(std::stof(argv[1]), std::stof(argv[2]), std::stof(argv[3]), std::stof(argv[4]));
 
-    intersection.print();
+    float cpmNorth = std::stof(argv[1]);
+    float cpmEast  = std::stof(argv[2]);
+    float cpmSouth = std::stof(argv[3]);
+    float cpmWest  = std::stof(argv[4]);
+    float cpmTotal = cpmNorth + cpmEast + cpmSouth + cpmWest;
+
+    ControlPicker picker;
+
+    std::vector<float> roundaboutEfficiencies = {0.9, 0.75, 0.5};
+    ControlMethod roundabout(10, 20, roundaboutEfficiencies);
+    picker.add_method(roundabout);
+
+    std::vector<float> stopSignEfficiencies = {0.4, 0.3, 0.2};
+    ControlMethod stopSign(10, 20, stopSignEfficiencies);
+    picker.add_method(stopSign);
+
+    std::vector<float> trafficLightEfficiencies = {0.3, 0.75, 0.9};
+    ControlMethod trafficLights(10, 20, trafficLightEfficiencies);
+    picker.add_method(trafficLights);
+
+    ControlMethod *best = picker.get_best_ctrl_method(cpmTotal);
+
+    std::cout << "Best method: lower limit = " << best->get_cpm_lower_limit() << ", upper limit = " 
+        << best->get_cpm_upper_limit() << ", efficiency: " << best->get_eff(cpmTotal) << std::endl;
 
     return 0;
 }
