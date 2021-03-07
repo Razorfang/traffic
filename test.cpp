@@ -1,24 +1,28 @@
 #include <iostream>
 #include <vector>
+#include <string>
 
 /* Generic control method. */
 class ControlMethod
 {
     public:
-        ControlMethod(float cpmLimitLower, float cpmLimitUpper, std::vector<float> &efficiencies);
+        ControlMethod(float cpmLimitLower, float cpmLimitUpper, const std::vector<float> &efficiencies, const std::string &name);
         float get_cpm_lower_limit(void);
         float get_cpm_upper_limit(void);
         float get_eff(float cpmTotal);
+        const std::string &get_name(void);
     private:
         float cpmL, cpmU;
         std::vector<float> eff;
+        std::string nm;
 };
 
-ControlMethod::ControlMethod(float cpmLimitLower, float cpmLimitUpper, std::vector<float> &efficiencies)
+ControlMethod::ControlMethod(float cpmLimitLower, float cpmLimitUpper, const std::vector<float> &efficiencies, const std::string &name)
 {
     cpmL = cpmLimitLower;
     cpmU = cpmLimitUpper;
     std::copy(efficiencies.begin(), efficiencies.end(), std::back_inserter(eff));
+    nm = name;
 }
 
 float ControlMethod::get_cpm_lower_limit(void)
@@ -29,6 +33,11 @@ float ControlMethod::get_cpm_lower_limit(void)
 float ControlMethod::get_cpm_upper_limit(void)
 {
     return cpmU;
+}
+
+const std::string &ControlMethod::get_name(void)
+{
+    return nm;
 }
 
 float ControlMethod::get_eff(float cpmTotal)
@@ -51,13 +60,13 @@ float ControlMethod::get_eff(float cpmTotal)
 class ControlPicker
 {
     public:
-        void add_method(ControlMethod &method);
+        void add_method(const ControlMethod &method);
         ControlMethod *get_best_ctrl_method(float cpmTotal);
     private:
         std::vector<ControlMethod> methods;
 };
 
-void ControlPicker::add_method(ControlMethod &method)
+void ControlPicker::add_method(const ControlMethod &method)
 {
     methods.push_back(method);
 }
@@ -96,21 +105,20 @@ int main(int argc, char *argv[])
     ControlPicker picker;
 
     std::vector<float> roundaboutEfficiencies = {0.9, 0.75, 0.5};
-    ControlMethod roundabout(10, 20, roundaboutEfficiencies);
+    ControlMethod roundabout(10, 20, roundaboutEfficiencies, "Roundabout");
     picker.add_method(roundabout);
 
     std::vector<float> stopSignEfficiencies = {0.4, 0.3, 0.2};
-    ControlMethod stopSign(10, 20, stopSignEfficiencies);
+    ControlMethod stopSign(10, 20, stopSignEfficiencies, "Stop Sign");
     picker.add_method(stopSign);
 
     std::vector<float> trafficLightEfficiencies = {0.3, 0.75, 0.9};
-    ControlMethod trafficLights(10, 20, trafficLightEfficiencies);
-    picker.add_method(trafficLights);
+    ControlMethod trafficLight(10, 20, trafficLightEfficiencies, "Traffic Light");
+    picker.add_method(trafficLight);
 
     ControlMethod *best = picker.get_best_ctrl_method(cpmTotal);
 
-    std::cout << "Best method: lower limit = " << best->get_cpm_lower_limit() << ", upper limit = " 
-        << best->get_cpm_upper_limit() << ", efficiency: " << best->get_eff(cpmTotal) << std::endl;
+    std::cout << "The best option for a total CPM of " << cpmTotal <<  " is a " << best->get_name() << std::endl;
 
     return 0;
 }
